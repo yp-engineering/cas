@@ -324,24 +324,29 @@ func (c *Client) validateTicketCas1(ticket string, service *http.Request) error 
 func (c *Client) getSession(w http.ResponseWriter, r *http.Request) {
 	cookie := getCookie(w, r)
 
-	if s, ok := c.sessions[cookie.Value]; ok {
-		if t, err := c.tickets.Read(s); err == nil {
-			if glog.V(1) {
-				glog.Infof("Re-used ticket %s for %s", s, t.User)
-			}
+	for _, cookie := range r.Cookies() {
+		if cookie.Name != sessionCookieName {
+			continue
+		}
+		if s, ok := c.sessions[cookie.Value]; ok {
+			if t, err := c.tickets.Read(s); err == nil {
+				if glog.V(1) {
+					glog.Infof("Re-used ticket %s for %s", s, t.User)
+				}
 
-			setAuthenticationResponse(r, t)
-			return
-		} else {
-			if glog.V(2) {
-				glog.Infof("Ticket %v not in %T: %v", s, c.tickets, err)
-			}
+				setAuthenticationResponse(r, t)
+				return
+			} else {
+				if glog.V(2) {
+					glog.Infof("Ticket %v not in %T: %v", s, c.tickets, err)
+				}
 
-			if glog.V(1) {
-				glog.Infof("Clearing ticket %s, no longer exists in ticket store", s)
-			}
+				if glog.V(1) {
+					glog.Infof("Clearing ticket %s, no longer exists in ticket store", s)
+				}
 
-			clearCookie(w, cookie)
+				clearCookie(w, cookie)
+			}
 		}
 	}
 
